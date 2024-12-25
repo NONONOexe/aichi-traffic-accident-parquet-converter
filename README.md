@@ -53,10 +53,10 @@ The benchmark compares read speed of CSV and Parquet files using dataset of traf
 
 The benchmarks were conducted in R using the `microbenchmark` package, with results averaged over 100 runs. Tests were performed on a machine with the following specifications:
 
--   **Processor**: 11th Gen Intel Core i7-11370H \@ 3.30GHz\
--   **Memory**: 32.0 GB RAM\
--   **Storage**: SSD\
--   **Operating System**: Windows
+- **Processor**: 11th Gen Intel Core i7-11370H @ 3.30GHz
+- **Memory**: 32.0 GB RAM
+- **Storage**: SSD
+- **Operating System**: Windows
 
 ## Licence
 
