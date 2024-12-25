@@ -2,8 +2,6 @@ library(readxl)
 library(tidyverse)
 library(scales)
 library(celestial)
-library(sf)
-library(geoarrow)
 library(arrow)
 
 # Define column names -----------------------------------------------------
@@ -101,9 +99,12 @@ convert_deg <- function(dms) {
 }
 
 convert_to_parquet <- function(file_name) {
-  data_dir <- Sys.getenv("DATA_DIR", unset = "internal")
-  accident_file_path <- file.path(data_dir, paste0(file_name, ".xlsx"))
+  # Load accident data
+  input_dir <- Sys.getenv("DATA_DIR", unset = "internal")
+  accident_file_path <- file.path(input_dir, paste0(file_name, ".xlsx"))
   accident_data <- read_excel(accident_file_path, .name_repair = make.unique)
+
+  # Process traffic accidents
   traffic_accidents <- accident_data |>
     select(any_of(c(key_items, accident_items))) |>
     distinct(accident_id, .keep_all = TRUE) |>
@@ -116,26 +117,27 @@ convert_to_parquet <- function(file_name) {
       severe_injury   = as.integer(severe_injury),
       slight_injury   = as.integer(slight_injury)
     ) |>
-    drop_na(latitude, longitude) |>
-    st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+    drop_na(latitude, longitude)
 
+  # Process injured parties
   injured_parties <- accident_data |>
     select(any_of(c(key_items, party_items))) |>
     mutate(party_age = as.integer(party_age))
 
+  # Write to output directory
+  output_dir <- Sys.getenv("OUTPUT_DIR", unset = "data")
   write_parquet(
     traffic_accidents,
-    paste0("traffic-accidents-", file_name, ".parquet")
+    file.path(output_dir, str_c("traffic-accidents-", file_name, ".parquet"))
   )
   write_parquet(
     injured_parties,
-    paste0("injured-parties-", file_name, ".parquet")
+    file.path(output_dir, str_c("injured-parties-", file_name, ".parquet"))
   )
 }
 
 
 # Convert accident data into parquet file ---------------------------------
 
-for (file_name in as.character(2009:2021)) {
-  convert_to_parquet(file_name)
-}
+years <- 2009:2021
+walk(as.character(years), convert_to_parquet)
