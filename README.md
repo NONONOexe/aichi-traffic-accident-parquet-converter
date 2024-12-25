@@ -47,16 +47,16 @@ traffic_accidents = gpd.GeoDataFrame(
 The benchmark compares read speed of CSV and Parquet files using dataset of traffic accidents recorded in 2021. The dataset, originally an Excel file (26,314 KB), was converted to CSV and Parquet formats for analysis.
 
 | Format  | Size on Disk (KB) | Average Read Time (ms) | Standard Deviation (ms) |
-|-----------------|----------------:|------------------:|-------------------:|
+|---------|------------------:|-----------------------:|------------------------:|
 | CSV     |            93,736 |                 725.68 |                   73.30 |
 | Parquet |             1,767 |                  74.77 |                   24.64 |
 
 The benchmarks were conducted in R using the `microbenchmark` package, with results averaged over 100 runs. Tests were performed on a machine with the following specifications:
 
-- **Processor**: 11th Gen Intel Core i7-11370H @ 3.30GHz  
-- **Memory**: 32.0 GB RAM  
-- **Storage**: SSD  
-- **Operating System**: Windows
+-   **Processor**: 11th Gen Intel Core i7-11370H \@ 3.30GHz\
+-   **Memory**: 32.0 GB RAM\
+-   **Storage**: SSD\
+-   **Operating System**: Windows
 
 ## Licence
 
