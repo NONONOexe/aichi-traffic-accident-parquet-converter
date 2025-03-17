@@ -1,9 +1,3 @@
-library(readxl)
-library(tidyverse)
-library(scales)
-library(celestial)
-library(arrow)
-
 # Define column names -----------------------------------------------------
 
 key_items <- c(
@@ -79,37 +73,39 @@ party_items <- c(
 
 convert_deg <- function(dms) {
   dms_num <- dms |>
-    str_replace("^([0-9]{3})([0-9]{8})$", "\\1.\\2") |>
+    stringr::str_replace("^([0-9]{3})([0-9]{8})$", "\\1.\\2") |>
     as.numeric()
-  dms_str <- number(dms_num, accuracy = .00000001, digits = 8)
+  dms_str <- scales::number(dms_num, accuracy = .00000001, digits = 8)
 
   d <- dms_str |>
-    str_replace("^(.+)\\..{8}$", "\\1") |>
-    str_replace_na("0")
+    stringr::str_replace("^(.+)\\..{8}$", "\\1") |>
+    stringr::str_replace_na("0")
   m <- dms_str |>
-    str_replace("^.+\\.(.{2}).{6}$", "\\1") |>
-    str_replace_na("0")
+    stringr::str_replace("^.+\\.(.{2}).{6}$", "\\1") |>
+    stringr::str_replace_na("0")
   s <- dms_str |>
-    str_replace("^.+\\..{2}(.{2})(.{4})$", "\\1.\\2") |>
-    str_replace_na("0")
+    stringr::str_replace("^.+\\..{2}(.{2})(.{4})$", "\\1.\\2") |>
+    stringr::str_replace_na("0")
 
-  deg <- if_else(is.na(dms), dms_num, dms2deg(d, m, s))
+  deg <- dplyr::if_else(is.na(dms), dms_num, celestial::dms2deg(d, m, s))
 
   return(deg)
 }
 
 convert_to_parquet <- function(file_name) {
   # Load accident data
-  input_dir <- Sys.getenv("DATA_DIR", unset = "internal")
+  input_dir <- Sys.getenv("ACCIDENT_DATA_DIR")
   accident_file_path <- file.path(input_dir, paste0(file_name, ".xlsx"))
-  accident_data <- read_excel(accident_file_path, .name_repair = make.unique)
+  accident_data <- readxl::read_excel(
+    accident_file_path, .name_repair = make.unique
+  )
 
   # Process traffic accidents
   traffic_accidents <- accident_data |>
-    select(any_of(c(key_items, accident_items))) |>
-    distinct(accident_id, .keep_all = TRUE) |>
-    mutate(
-      occurrence_date = as_date(occurrence_date),
+    dplyr::select(dplyr::any_of(c(key_items, accident_items))) |>
+    dplyr::distinct(accident_id, .keep_all = TRUE) |>
+    dplyr::mutate(
+      occurrence_date = lubridate::as_date(occurrence_date),
       occurrence_hour = as.integer(occurrence_hour),
       latitude        = convert_deg(latitude),
       longitude       = convert_deg(longitude),
@@ -117,22 +113,31 @@ convert_to_parquet <- function(file_name) {
       severe_injury   = as.integer(severe_injury),
       slight_injury   = as.integer(slight_injury)
     ) |>
-    drop_na(latitude, longitude)
+    dplyr::mutate(
+      dplyr::across(dplyr::where(is.character), stringr::str_squish)
+    ) |>
+    tidyr::drop_na(latitude, longitude)
 
   # Process injured parties
   injured_parties <- accident_data |>
-    select(any_of(c(key_items, party_items))) |>
-    mutate(party_age = as.integer(party_age))
+    dplyr::select(dplyr::any_of(c(key_items, party_items))) |>
+    dplyr::mutate(party_age = as.integer(party_age))
 
   # Write to output directory
-  output_dir <- Sys.getenv("OUTPUT_DIR", unset = "data")
-  write_parquet(
+  output_dir <- Sys.getenv("OUTPUT_DIR")
+  arrow::write_parquet(
     traffic_accidents,
-    file.path(output_dir, str_c("traffic-accidents-", file_name, ".parquet"))
+    file.path(
+      output_dir,
+      stringr::str_c("traffic-accidents-", file_name, ".parquet")
+    )
   )
-  write_parquet(
+  arrow::write_parquet(
     injured_parties,
-    file.path(output_dir, str_c("injured-parties-", file_name, ".parquet"))
+    file.path(
+      output_dir,
+      stringr::str_c("injured-parties-", file_name, ".parquet")
+    )
   )
 }
 
@@ -140,4 +145,4 @@ convert_to_parquet <- function(file_name) {
 # Convert accident data into parquet file ---------------------------------
 
 years <- 2009:2021
-walk(as.character(years), convert_to_parquet)
+purrr::walk(as.character(years), convert_to_parquet)
